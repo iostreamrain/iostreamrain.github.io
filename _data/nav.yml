@@ -1,6 +1,8 @@
 list:
   - title: Home
     url: ""
+  - title: 中文版
+    url: chinese
   - title: About
     url: about
   - title: Feed

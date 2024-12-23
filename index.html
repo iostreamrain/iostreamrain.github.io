@@ -131,9 +131,35 @@
         
         /* 修改商品名称列的样式 */
         td:nth-child(4) {
-            white-space: normal;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             max-width: 200px;
+            position: relative;
+            line-height: 1.2;
+            height: 20px;
+        }
+        
+        /* 修改tooltip样式 */
+        td:nth-child(4):hover::after {
+            content: attr(data-full-text);
+            position: fixed;  /* 改为 fixed 定位 */
+            left: 50%;       /* 居中显示 */
+            transform: translateX(-50%);  /* 水平居中 */
+            top: 50%;        /* 垂直居中 */
+            transform: translate(-50%, -50%);  /* 完全居中 */
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            z-index: 1000;
+            font-size: 14px;
+            max-width: 400px;
+            white-space: normal;
             word-break: break-word;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            line-height: 1.4;
+            pointer-events: none;  /* 防止tooltip影响鼠标事件 */
         }
         
         /* 添加行悬停效果 */
@@ -425,6 +451,10 @@
                 
                 this.filteredData.forEach(item => {
                     const row = document.createElement('tr');
+                    const productName = item['商品名称'] || '';
+                    // 转义商品名称中的特殊字符
+                    const escapedProductName = productName.replace(/"/g, '&quot;');
+                    
                     row.innerHTML = `
                         <td>
                             <div class="loading-placeholder" data-src="${item['商品图片链接']}">
@@ -433,7 +463,7 @@
                         </td>
                         <td>${item['机会类型名称'] || ''}</td>
                         <td>${item['招标ID'] || ''}</td>
-                        <td class="clickable">${item['商品名称'] || ''}</td>
+                        <td class="clickable" data-full-text="${escapedProductName}">${productName}</td>
                         <td>${item['开始时间'] || ''}</td>
                         <td>${item['剩余时间(天)'] || ''}</td>
                         <td class="clickable">${item['权益说明'] || ''}</td>
@@ -486,7 +516,7 @@
             }
         }
 
-        // 添加图��放大相关函数
+        // 添加图片放大相关函数
         function showImageModal(imgUrl) {
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');

@@ -128,6 +128,111 @@
         .filter-option {
             margin: 5px 0;
         }
+        
+        /* 修改商品名称列的样式 */
+        td:nth-child(4) {
+            white-space: normal;
+            max-width: 200px;
+            word-break: break-word;
+        }
+        
+        /* 添加行悬停效果 */
+        tr:hover {
+            background-color: transparent;
+            cursor: default;
+        }
+        
+        /* 详情弹窗样式 */
+        .detail-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: relative;
+            background-color: white;
+            margin: 50px auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .close-button {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .detail-table th {
+            text-align: right;
+            padding: 8px;
+            width: 150px;
+            background-color: #f8f9fa;
+            position: relative;
+        }
+        
+        .detail-table td {
+            padding: 8px;
+            word-break: break-word;
+        }
+        
+        .detail-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        /* 图片放大弹窗样式 */
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            cursor: pointer;
+        }
+        
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90vh;
+            margin: auto;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .clickable {
+            cursor: pointer;
+            /* text-decoration: underline; */
+            color: #0066cc;
+        }
+        
+        .clickable:hover {
+            background-color: #f0f0f0;
+        }
     </style>
 </head>
 <body>
@@ -151,6 +256,18 @@
             </thead>
             <tbody id="tableBody"></tbody>
         </table>
+    </div>
+
+    <div id="detailModal" class="detail-modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <h2>商品详情</h2>
+            <table class="detail-table" id="detailTable"></table>
+        </div>
+    </div>
+
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <img id="modalImage" src="" alt="放大图片">
     </div>
 
     <script>
@@ -184,6 +301,12 @@
                 const img = document.createElement('img');
                 img.className = 'product-img';
                 img.src = imgUrl;
+                
+                // 添加点击事件，阻止事件冒泡
+                img.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showImageModal(imgUrl);
+                });
                 
                 img.onload = () => {
                     container.innerHTML = '';
@@ -310,12 +433,19 @@
                         </td>
                         <td>${item['机会类型名称'] || ''}</td>
                         <td>${item['招标ID'] || ''}</td>
-                        <td>${item['商品名称'] || ''}</td>
+                        <td class="clickable">${item['商品名称'] || ''}</td>
                         <td>${item['开始时间'] || ''}</td>
                         <td>${item['剩余时间(天)'] || ''}</td>
-                        <td>${item['权益说明'] || ''}</td>
+                        <td class="clickable">${item['权益说明'] || ''}</td>
                         <td>${item['产品上架日期'] || ''}</td>
                     `;
+                    
+                    // 移除整行的点击事件，改为只对特定单元格添加点击事件
+                    const nameCell = row.querySelector('td:nth-child(4)');  // 商品名称列
+                    const rightCell = row.querySelector('td:nth-child(7)'); // 权益说明列
+                    
+                    nameCell.addEventListener('click', () => this.showDetails(item));
+                    rightCell.addEventListener('click', () => this.showDetails(item));
                     
                     tableBody.appendChild(row);
                     
@@ -323,7 +453,57 @@
                     this.imageLoader.observe(imgContainer);
                 });
             }
+            
+            showDetails(item) {
+                const modal = document.getElementById('detailModal');
+                const detailTable = document.getElementById('detailTable');
+                detailTable.innerHTML = '';
+                
+                // 遍历所有属性并显示
+                for (const [key, value] of Object.entries(item)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <th>${key}</th>
+                        <td>${value !== null ? value : ''}</td>
+                    `;
+                    detailTable.appendChild(row);
+                }
+                
+                modal.style.display = 'block';
+            }
         }
+
+        // 添加关闭弹窗函数
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // 点击弹窗外部关闭弹窗
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // 添加图��放大相关函数
+        function showImageModal(imgUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = imgUrl;
+            modal.style.display = 'block';
+        }
+        
+        function closeImageModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+        
+        // 添加ESC键关闭图片弹窗
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             const tableManager = new TableManager();

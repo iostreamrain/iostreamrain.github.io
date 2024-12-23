@@ -36,6 +36,29 @@
             padding: 12px;
             border-bottom: 1px solid #dee2e6;
             vertical-align: top;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* 权益说明列可以显示多行 */
+        td:nth-child(7) {
+            white-space: normal;
+            max-width: 300px;
+        }
+
+        /* 调整图片列宽度 */
+        td:first-child {
+            width: 80px;
+            min-width: 80px;
+        }
+
+        /* 时间列固定宽度 */
+        td:nth-child(5),
+        td:nth-child(8) {
+            width: 150px;
+            min-width: 150px;
         }
         
         .product-img {
@@ -117,11 +140,13 @@
             <thead>
                 <tr>
                     <th>商品图片</th>
-                    <th class="sort-header" data-column="招标ID">招标ID</th>
-                    <th class="sort-header" data-column="SPU编号">SPU编号</th>
+                    <th class="sort-header" data-column="机会类型名称">机会类型名称</th>
+                    <th class="sort-header" data-column="招标ID">招商ID</th>
                     <th class="sort-header" data-column="商品名称">商品名称</th>
-                    <th class="sort-header" data-column="商品所有者">商品所有者</th>
-                    <th class="sort-header" data-column="商品图片链接">商品图片链接</th>
+                    <th class="sort-header" data-column="开始时间">开始时间</th>
+                    <th class="sort-header" data-column="剩余时间(天)">剩余时间(天)</th>
+                    <th class="sort-header" data-column="权益说明">权益说明</th>
+                    <th class="sort-header" data-column="产品上架日期">产品上架日期</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -209,12 +234,10 @@
             }
             
             setupEventListeners() {
-                // 搜索功能
                 document.getElementById('searchInput').addEventListener('input', (e) => {
                     this.handleSearch(e.target.value);
                 });
                 
-                // 排序功能
                 document.querySelectorAll('.sort-header').forEach(header => {
                     header.addEventListener('click', () => {
                         this.handleSort(header.dataset.column);
@@ -260,7 +283,6 @@
                     let valueA = a[column];
                     let valueB = b[column];
                     
-                    // 处理数字类型
                     if (!isNaN(valueA) && !isNaN(valueB)) {
                         valueA = Number(valueA);
                         valueB = Number(valueB);
@@ -286,11 +308,13 @@
                                 等待加载
                             </div>
                         </td>
-                        <td>${item['招标ID']}</td>
-                        <td>${item['SPU编号']}</td>
-                        <td>${item['商品名称']}</td>
-                        <td>${item['商品所有者']}</td>
-                        <td>${item['商品图片链接']}</td>
+                        <td>${item['机会类型名称'] || ''}</td>
+                        <td>${item['招标ID'] || ''}</td>
+                        <td>${item['商品名称'] || ''}</td>
+                        <td>${item['开始时间'] || ''}</td>
+                        <td>${item['剩余时间(天)'] || ''}</td>
+                        <td>${item['权益说明'] || ''}</td>
+                        <td>${item['产品上架日期'] || ''}</td>
                     `;
                     
                     tableBody.appendChild(row);
@@ -301,7 +325,6 @@
             }
         }
 
-        // 初始化表格管理器
         document.addEventListener('DOMContentLoaded', () => {
             const tableManager = new TableManager();
             tableManager.loadData();

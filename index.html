@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>商品信息表</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .table-container {
+            height: 800px;
+            overflow: auto;
+            position: relative;
+            border: 1px solid #ddd;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            padding: 12px;
+            border-bottom: 2px solid #dee2e6;
+            text-align: left;
+            z-index: 1;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        
+        .product-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            transition: opacity 0.3s;
+        }
+        
+        .loading-placeholder {
+            width: 80px;
+            height: 80px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-input {
+            padding: 8px;
+            width: 300px;
+            margin-right: 10px;
+        }
+        
+        .sort-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .sort-header:hover {
+            background-color: #e9ecef;
+        }
+        
+        .sort-header::after {
+            content: '↕️';
+            margin-left: 5px;
+            opacity: 0.3;
+        }
+        
+        .sort-header.asc::after {
+            content: '↑';
+            opacity: 1;
+        }
+        
+        .sort-header.desc::after {
+            content: '↓';
+            opacity: 1;
+        }
+        
+        .filter-container {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .filter-option {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" class="search-input" placeholder="搜索任意列内容..." id="searchInput">
+    </div>
+    
+    <div class="table-container">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>商品图片</th>
+                    <th class="sort-header" data-column="招标ID">招标ID</th>
+                    <th class="sort-header" data-column="SPU编号">SPU编号</th>
+                    <th class="sort-header" data-column="商品名称">商品名称</th>
+                    <th class="sort-header" data-column="商品所有者">商品所有者</th>
+                    <th class="sort-header" data-column="商品图片链接">商品图片链接</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        class LazyImageLoader {
+            constructor() {
+                this.observer = new IntersectionObserver(this.handleIntersection.bind(this), {
+                    root: document.querySelector('.table-container'),
+                    rootMargin: '50px 0px',
+                    threshold: 0.1
+                });
+                
+                this.loadedImages = new Set();
+            }
+            
+            handleIntersection(entries) {
+                entries.forEach(entry => {
+                    const container = entry.target;
+                    
+                    if (entry.isIntersecting) {
+                        this.loadImage(container);
+                    } else {
+                        this.unloadImage(container);
+                    }
+                });
+            }
+            
+            loadImage(container) {
+                const imgUrl = container.dataset.src;
+                if (!imgUrl || this.loadedImages.has(container)) return;
+                
+                const img = document.createElement('img');
+                img.className = 'product-img';
+                img.src = imgUrl;
+                
+                img.onload = () => {
+                    container.innerHTML = '';
+                    container.appendChild(img);
+                    this.loadedImages.add(container);
+                };
+                
+                img.onerror = () => {
+                    container.innerHTML = '加载失败';
+                };
+            }
+            
+            unloadImage(container) {
+                if (!this.loadedImages.has(container)) return;
+                
+                container.innerHTML = '<div class="loading-placeholder">等待加载</div>';
+                this.loadedImages.delete(container);
+            }
+            
+            observe(element) {
+                this.observer.observe(element);
+            }
+            
+            disconnect() {
+                this.observer.disconnect();
+            }
+        }
+
+        class TableManager {
+            constructor() {
+                this.originalData = [];
+                this.filteredData = [];
+                this.currentSortColumn = null;
+                this.isAscending = true;
+                this.imageLoader = new LazyImageLoader();
+                this.setupEventListeners();
+            }
+            
+            async loadData() {
+                try {
+                    const response = await fetch('招标商品信息表_inputs_120x402_20241223_0947.json');
+                    this.originalData = await response.json();
+                    this.filteredData = [...this.originalData];
+                    this.renderTable();
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                }
+            }
+            
+            setupEventListeners() {
+                // 搜索功能
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.handleSearch(e.target.value);
+                });
+                
+                // 排序功能
+                document.querySelectorAll('.sort-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        this.handleSort(header.dataset.column);
+                    });
+                });
+            }
+            
+            handleSearch(searchText) {
+                if (!searchText) {
+                    this.filteredData = [...this.originalData];
+                } else {
+                    searchText = searchText.toLowerCase();
+                    this.filteredData = this.originalData.filter(item => {
+                        return Object.values(item).some(value => 
+                            String(value).toLowerCase().includes(searchText)
+                        );
+                    });
+                }
+                this.renderTable();
+            }
+            
+            handleSort(column) {
+                const headers = document.querySelectorAll('.sort-header');
+                headers.forEach(header => {
+                    if (header.dataset.column !== column) {
+                        header.classList.remove('asc', 'desc');
+                    }
+                });
+                
+                const header = document.querySelector(`[data-column="${column}"]`);
+                
+                if (this.currentSortColumn === column) {
+                    this.isAscending = !this.isAscending;
+                    header.classList.toggle('asc', this.isAscending);
+                    header.classList.toggle('desc', !this.isAscending);
+                } else {
+                    this.currentSortColumn = column;
+                    this.isAscending = true;
+                    header.classList.add('asc');
+                }
+                
+                this.filteredData.sort((a, b) => {
+                    let valueA = a[column];
+                    let valueB = b[column];
+                    
+                    // 处理数字类型
+                    if (!isNaN(valueA) && !isNaN(valueB)) {
+                        valueA = Number(valueA);
+                        valueB = Number(valueB);
+                    }
+                    
+                    if (valueA < valueB) return this.isAscending ? -1 : 1;
+                    if (valueA > valueB) return this.isAscending ? 1 : -1;
+                    return 0;
+                });
+                
+                this.renderTable();
+            }
+            
+            renderTable() {
+                const tableBody = document.getElementById('tableBody');
+                tableBody.innerHTML = '';
+                
+                this.filteredData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <div class="loading-placeholder" data-src="${item['商品图片链接']}">
+                                等待加载
+                            </div>
+                        </td>
+                        <td>${item['招标ID']}</td>
+                        <td>${item['SPU编号']}</td>
+                        <td>${item['商品名称']}</td>
+                        <td>${item['商品所有者']}</td>
+                        <td>${item['商品图片链接']}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                    
+                    const imgContainer = row.querySelector('.loading-placeholder');
+                    this.imageLoader.observe(imgContainer);
+                });
+            }
+        }
+
+        // 初始化表格管理器
+        document.addEventListener('DOMContentLoaded', () => {
+            const tableManager = new TableManager();
+            tableManager.loadData();
+        });
+    </script>
+</body>
+</html> 

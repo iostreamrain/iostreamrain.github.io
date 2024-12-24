@@ -272,18 +272,74 @@
             background-color: rgba(0, 0, 0, 0.9);
             z-index: 2000;
             cursor: pointer;
+            align-items: center;
+            justify-content: center;
         }
         
-        .image-modal img {
+        .modal-content-wrapper {
+            display: flex;
             max-width: 90%;
             max-height: 90vh;
             margin: auto;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            overflow: hidden;
+            width: 90%;
+        }
+        
+        .modal-image-container {
+            flex: 0 0 66.666%;
+            height: 90vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .modal-image-container img {
+            max-width: 100%;
+            max-height: 90vh;
             border: 2px solid white;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            object-fit: contain;
+        }
+        
+        .modal-info-container {
+            flex: 0 0 33.333%;
+            padding: 20px;
+            color: white;
+            font-size: 14px;
+            overflow-y: auto;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            box-sizing: border-box;
+        }
+        
+        .modal-info-container .info-section {
+            margin-bottom: 20px;
+        }
+        
+        .modal-info-container .info-label {
+            color: #aaa;
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .modal-info-container h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #fff;
+            line-height: 1.4;
+        }
+        
+        .modal-info-container p {
+            margin: 0 0 20px 0;
+            line-height: 1.4;
+            opacity: 0.9;
+            font-size: 13px;
+            white-space: pre-wrap;
         }
         
         .clickable {
@@ -486,7 +542,7 @@
             height: 105px;
         }
 
-        /* 移除表格行高度限制 */
+        /* 移除表格行高度制 */
         .detail-table tr {
             height: auto;
             max-height: none;
@@ -522,6 +578,44 @@
             border-radius: 4px;
             font-size: 14px;
             opacity: 0.8;
+            z-index: 2001;
+        }
+
+        /* 修改图片模态框的样式 */
+        .image-modal {
+            display: none;  /* 确保默认是隐藏的 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 修改模态框内容的点击判断 */
+        .modal-content-wrapper {
+            display: flex;
+            max-width: 90%;
+            max-height: 90vh;
+            margin: auto;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            overflow: hidden;
+            width: 90%;
+        }
+
+        /* 添加可点击区域的样式 */
+        .modal-info-content {
+            padding: 20px;
+            pointer-events: none;  /* 默认不接收点击事件 */
+        }
+
+        .modal-info-content .info-section {
+            pointer-events: auto;  /* 只有信息部分接收点击事件 */
         }
     </style>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -571,8 +665,28 @@
         </div>
     </div>
 
-    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
-        <img id="modalImage" src="" alt="放大图片">
+    <div id="imageModal" class="image-modal">
+        <div class="modal-content-wrapper">
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="放大图片">
+            </div>
+            <div class="modal-info-container">
+                <div class="modal-info-content">
+                    <div class="info-section">
+                        <div class="info-label">商品名称</div>
+                        <h3 id="modalProductName"></h3>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-label">招标要求</div>
+                        <p id="modalRequirement"></p>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-label">权益说明</div>
+                        <p id="modalRights"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -649,7 +763,7 @@
                 this.setupEventListeners();
                 this.notes = JSON.parse(localStorage.getItem('tableNotes') || '{}');
                 this.categories = JSON.parse(localStorage.getItem('tableCategories') || '{}');
-                this.categoryList = JSON.parse(localStorage.getItem('categoryList') || '["未分类", "重��", "普通", "低优先级"]');
+                this.categoryList = JSON.parse(localStorage.getItem('categoryList') || '["未分类", "重要", "普通", "低优先级"]');
                 this.setupCategoryManager();
                 this.setupExportButton();
                 this.currentImageIndex = -1;
@@ -772,7 +886,7 @@
                 this.filteredData.forEach(item => {
                     const row = document.createElement('tr');
                     const productName = item['商品名称'] || '';
-                    const itemId = item['招标ID']; // ���用招标ID作为唯一标识
+                    const itemId = item['招标ID']; // 用招标ID作为唯一标识
                     const escapedProductName = productName.replace(/"/g, '&quot;');
                     
                     // 添加分类选择和备注列
@@ -945,7 +1059,7 @@
                 allButton.textContent = '全部';
                 filterContainer.appendChild(allButton);
                 
-                // 添加��他分类按钮
+                // 添加其他分类按钮
                 this.categoryList.forEach(category => {
                     const button = document.createElement('button');
                     button.className = 'filter-button';
@@ -1141,7 +1255,17 @@
                 if (this.currentImageIndex >= 0 && this.currentImageIndex < urls.length) {
                     const modal = document.getElementById('imageModal');
                     const modalImg = document.getElementById('modalImage');
-                    modalImg.src = urls[this.currentImageIndex];
+                    const currentUrl = urls[this.currentImageIndex];
+                    modalImg.src = currentUrl;
+                    
+                    // 查找对应的数据项
+                    const currentItem = this.filteredData.find(item => item['商品图片链接'] === currentUrl);
+                    if (currentItem) {
+                        document.getElementById('modalProductName').textContent = currentItem['商品名称'] || '';
+                        document.getElementById('modalRequirement').textContent = currentItem['招标要求'] || '';
+                        document.getElementById('modalRights').textContent = currentItem['权益说明'] || '';
+                    }
+                    
                     modal.style.display = 'block';
                 }
             }
@@ -1206,6 +1330,37 @@
         document.addEventListener('DOMContentLoaded', () => {
             tableManager = new TableManager();
             tableManager.loadJsonFiles();
+            
+            // 修改模态框点击事件
+            document.getElementById('imageModal').addEventListener('click', (e) => {
+                // 检查点击是否在信息区域内
+                const infoContainer = document.querySelector('.modal-info-container');
+                const imageContainer = document.querySelector('.modal-image-container');
+                const modalImage = document.getElementById('modalImage');
+                
+                // 如果点击在信息容器内，直接返回
+                if (infoContainer.contains(e.target)) {
+                    return;
+                }
+                
+                // 如果点击在图片容器内，检查是否在图片保护区域内
+                if (imageContainer.contains(e.target)) {
+                    const rect = modalImage.getBoundingClientRect();
+                    const x = e.clientX;
+                    const y = e.clientY;
+                    
+                    // 检查点击位置是否在图片边缘30像素范围内
+                    if (x >= rect.left - 30 && 
+                        x <= rect.right + 30 && 
+                        y >= rect.top - 30 && 
+                        y <= rect.bottom + 30) {
+                        return;
+                    }
+                }
+                
+                // 如果点击在保护区域外，关闭模态框
+                closeImageModal();
+            });
         });
     </script>
 </body>

@@ -280,7 +280,7 @@
             display: flex;
             max-width: 90%;
             max-height: 90vh;
-            margin: auto;
+            margin: 30px auto auto auto;
             background: rgba(0, 0, 0, 0.8);
             border-radius: 8px;
             overflow: hidden;
@@ -601,14 +601,14 @@
             display: flex;
             max-width: 90%;
             max-height: 90vh;
-            margin: auto;
+            margin: 30px auto auto auto;
             background: rgba(0, 0, 0, 0.8);
             border-radius: 8px;
             overflow: hidden;
             width: 90%;
         }
 
-        /* 添加可点击区域的样式 */
+        /* 添加可点击区域样式 */
         .modal-info-content {
             padding: 20px;
             pointer-events: none;  /* 默认不接收点击事件 */
@@ -616,6 +616,24 @@
 
         .modal-info-content .info-section {
             pointer-events: auto;  /* 只有信息部分接收点击事件 */
+        }
+
+        /* 添加类目路径样式 */
+        .category-path {
+            font-size: 13px;
+            line-height: 1.4;
+            color: #fff;
+            margin: 0;
+        }
+
+        .category-path span {
+            color: #aaa;
+        }
+
+        .category-path span + span::before {
+            content: ">";
+            margin: 0 8px;
+            color: #666;
         }
     </style>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -672,6 +690,10 @@
             </div>
             <div class="modal-info-container">
                 <div class="modal-info-content">
+                    <div class="info-section">
+                        <div class="info-label">商品类目</div>
+                        <p id="modalCategory" class="category-path"></p>
+                    </div>
                     <div class="info-section">
                         <div class="info-label">商品名称</div>
                         <h3 id="modalProductName"></h3>
@@ -1264,6 +1286,18 @@
                         document.getElementById('modalProductName').textContent = currentItem['商品名称'] || '';
                         document.getElementById('modalRequirement').textContent = currentItem['招标要求'] || '';
                         document.getElementById('modalRights').textContent = currentItem['权益说明'] || '';
+                        
+                        // 构建并显示类目路径
+                        const categories = [
+                            currentItem['一级类目'],
+                            currentItem['二级类目'],
+                            currentItem['三级类目'],
+                            currentItem['四级类目']
+                        ].filter(cat => cat); // 过滤掉 null 和空值
+                        
+                        document.getElementById('modalCategory').innerHTML = categories
+                            .map(cat => `<span>${cat}</span>`)
+                            .join('');
                     }
                     
                     modal.style.display = 'block';
@@ -1343,17 +1377,17 @@
                     return;
                 }
                 
-                // 如果点击在图片容器内，检查是否在图片保护区域内
+                // 如果点击在图片容器内检查是否在图片保护区域内
                 if (imageContainer.contains(e.target)) {
                     const rect = modalImage.getBoundingClientRect();
                     const x = e.clientX;
                     const y = e.clientY;
                     
                     // 检查点击位置是否在图片边缘30像素范围内
-                    if (x >= rect.left - 30 && 
-                        x <= rect.right + 30 && 
-                        y >= rect.top - 30 && 
-                        y <= rect.bottom + 30) {
+                    if (x >= rect.left - 20 && 
+                        x <= rect.right + 20 && 
+                        y >= rect.top - 20 && 
+                        y <= rect.bottom + 20) {
                         return;
                     }
                 }

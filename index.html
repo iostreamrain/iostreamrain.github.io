@@ -53,8 +53,8 @@
         }
 
         /* 添加权益说明列的悬浮效果 */
-        td:nth-child(7):hover::after {
-            content: attr(title);
+        td:nth-child(7) .truncated-text:hover::after {
+            content: attr(data-full-text);
             position: fixed;
             left: 50%;
             top: 50%;
@@ -169,14 +169,14 @@
             height: 20px;
         }
         
-        /* 修改tooltip样式 */
-        td:nth-child(4):hover::after {
+        /* 修改 tooltip 样式 */
+        .truncated-text:hover::after {
             content: attr(data-full-text);
-            position: fixed;  /* 改为 fixed 定位 */
-            left: 50%;       /* 居中显示 */
-            transform: translateX(-50%);  /* 水平居中 */
-            top: 50%;        /* 垂直居中 */
-            transform: translate(-50%, -50%);  /* 完全居中 */
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 50%;
+            transform: translate(-50%, -50%);
             background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 8px 12px;
@@ -188,12 +188,11 @@
             word-break: break-word;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             line-height: 1.4;
-            pointer-events: none;  /* 防止tooltip影响鼠标事件 */
+            pointer-events: none;
         }
         
         /* 添加行悬停效果 */
         tr:hover {
-            background-color: transparent;
             cursor: default;
         }
         
@@ -332,14 +331,17 @@
         /* 分类样式 */
         .category-重要 {
             background-color: rgba(255, 200, 200, 0.2);
+            transition: background-color 0.2s;
         }
         
         .category-普通 {
             background-color: rgba(200, 255, 200, 0.2);
+            transition: background-color 0.2s;
         }
         
         .category-低优先级 {
             background-color: rgba(200, 200, 255, 0.2);
+            transition: background-color 0.2s;
         }
         
         /* 添加分类筛选容器样式 */
@@ -489,6 +491,23 @@
             height: auto;
             max-height: none;
         }
+
+        /* 修改行悬停效果 */
+        .category-重要:hover {
+            background-color: rgba(255, 200, 200, 0.3);
+        }
+        
+        .category-普通:hover {
+            background-color: rgba(200, 255, 200, 0.3);
+        }
+        
+        .category-低优先级:hover {
+            background-color: rgba(200, 200, 255, 0.3);
+        }
+        
+        tr:hover {
+            cursor: default;
+        }
     </style>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
@@ -573,7 +592,7 @@
                 img.className = 'product-img';
                 img.src = imgUrl;
                 
-                // 添加点击事件，阻止事件冒泡
+                // 加点击事件，阻止事件冒泡
                 img.addEventListener('click', (e) => {
                     e.stopPropagation();
                     showImageModal(imgUrl);
@@ -750,10 +769,10 @@
                         </td>
                         <td>${item['机会类型名称'] || ''}</td>
                         <td>${itemId || ''}</td>
-                        <td class="clickable" data-full-text="${escapedProductName}">${this.truncateText(productName)}</td>
+                        <td class="clickable">${this.truncateText(productName)}</td>
                         <td>${item['开始时间'] || ''}</td>
                         <td>${item['剩余时间(天)'] || ''}</td>
-                        <td class="clickable" title="${item['权益说明'] || ''}">${this.truncateText(item['权益说明'])}</td>
+                        <td class="clickable">${this.truncateText(item['权益说明'])}</td>
                         <td>${item['产品上架日期'] || ''}</td>
                         <td>
                             <select class="category-select" data-id="${itemId}">
@@ -863,7 +882,7 @@
                         '商品名称': item['商品名称'] || '',
                         '开始时间': item['开始时间'] || '',
                         '剩余时间(天)': item['剩余时间(天)'] || '',
-                        '权益说明': item['权益说明'] || '',
+                        '权益说明': item['权益说���'] || '',
                         '产品上架日期': item['产品上架日期'] || '',
                         '分类': category,
                         '备注': note,
@@ -1086,8 +1105,10 @@
             truncateText(text, length = 60) {
                 if (!text) return '';
                 const str = String(text);
-                if (str.length <= length) return str;
-                return str.slice(0, length) + '...';
+                if (str.length <= length) {
+                    return `<span class="full-text">${str}</span>`;
+                }
+                return `<span class="truncated-text" data-full-text="${str}">${str.slice(0, length)}...</span>`;
             }
         }
 

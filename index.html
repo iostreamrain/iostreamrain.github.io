@@ -46,9 +46,10 @@
         
         /* 权益说明列可以显示多行 */
         td:nth-child(7) {
-            white-space: nowrap;
+            white-space: pre-wrap;
             max-width: 300px;
-            line-height: 1.5;
+            min-width: 150px;
+            line-height: 1.2;
         }
 
         /* 添加权益说明列的悬浮效果 */
@@ -159,7 +160,7 @@
         
         /* 修改商品名称列的样式 */
         td:nth-child(4) {
-            white-space: nowrap;
+            white-space: pre-wrap;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 200px;
@@ -749,10 +750,10 @@
                         </td>
                         <td>${item['机会类型名称'] || ''}</td>
                         <td>${itemId || ''}</td>
-                        <td class="clickable" data-full-text="${escapedProductName}">${productName}</td>
+                        <td class="clickable" data-full-text="${escapedProductName}">${this.truncateText(productName)}</td>
                         <td>${item['开始时间'] || ''}</td>
                         <td>${item['剩余时间(天)'] || ''}</td>
-                        <td class="clickable" title="${item['权益说明'] || ''}">${item['权益说明'] || ''}</td>
+                        <td class="clickable" title="${item['权益说明'] || ''}">${this.truncateText(item['权益说明'])}</td>
                         <td>${item['产品上架日期'] || ''}</td>
                         <td>
                             <select class="category-select" data-id="${itemId}">
@@ -1080,6 +1081,13 @@
                         this.filterByCategory(e.target.dataset.category);
                     });
                 });
+            }
+
+            truncateText(text, length = 60) {
+                if (!text) return '';
+                const str = String(text);
+                if (str.length <= length) return str;
+                return str.slice(0, length) + '...';
             }
         }
 

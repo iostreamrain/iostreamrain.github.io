@@ -373,7 +373,7 @@
             
             async loadData() {
                 try {
-                    const response = await fetch('招标商品信息表_inputs_120x402_20241223_0947.json');
+                    const response = await fetch('招标商品信息表_所有类目-2024122409_120x401_20241224_0953.json');
                     this.originalData = await response.json();
                     this.filteredData = [...this.originalData];
                     this.renderTable();

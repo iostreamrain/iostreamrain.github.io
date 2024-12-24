@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>商品信息表</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .table-container {
+            height: 800px;
+            overflow: auto;
+            position: relative;
+            border: 1px solid #ddd;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            position: sticky;
+            top: 0;
+            background: #f8f9fa;
+            padding: 12px;
+            border-bottom: 2px solid #dee2e6;
+            text-align: left;
+            z-index: 1;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: top;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-height: 105px;
+            position: relative;
+        }
+        
+        /* 权益说明列可以显示多行 */
+        td:nth-child(7) {
+            white-space: pre-wrap;
+            max-width: 300px;
+            min-width: 150px;
+            line-height: 1.2;
+        }
+
+        /* 添加权益说明列的悬浮效果 */
+        td:nth-child(7) .truncated-text:hover::after {
+            content: attr(data-full-text);
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            z-index: 1000;
+            max-width: 80%;
+            max-height: 80vh;
+            overflow-y: auto;
+            white-space: normal;
+            word-break: break-word;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* 调整图片列宽度 */
+        td:first-child {
+            width: 80px;
+            min-width: 80px;
+        }
+
+        /* 时间列固定宽度 */
+        td:nth-child(5),
+        td:nth-child(8) {
+            width: 150px;
+            min-width: 150px;
+        }
+        
+        .product-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            transition: opacity 0.3s;
+        }
+        
+        .loading-placeholder {
+            width: 80px;
+            height: 80px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-input {
+            padding: 8px;
+            width: 300px;
+            margin-right: 10px;
+        }
+        
+        .sort-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .sort-header:hover {
+            background-color: #e9ecef;
+        }
+        
+        .sort-header::after {
+            content: '↕️';
+            margin-left: 5px;
+            opacity: 0.3;
+        }
+        
+        .sort-header.asc::after {
+            content: '⬆️';
+            opacity: 1;
+        }
+        
+        .sort-header.desc::after {
+            content: '⬇️';
+            opacity: 1;
+        }
+        
+        .filter-container {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .filter-option {
+            margin: 5px 0;
+        }
+        
+        /* 修改商品名称列的样式 */
+        td:nth-child(4) {
+            white-space: pre-wrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            position: relative;
+            line-height: 1.2;
+            height: 20px;
+        }
+        
+        /* 修改 tooltip 样式 */
+        .truncated-text:hover::after {
+            content: attr(data-full-text);
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            z-index: 1000;
+            font-size: 14px;
+            max-width: 400px;
+            white-space: normal;
+            word-break: break-word;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            line-height: 1.4;
+            pointer-events: none;
+        }
+        
+        /* 添加行悬停效果 */
+        tr:hover {
+            cursor: default;
+        }
+        
+        /* 详情弹窗样式 */
+        .detail-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: relative;
+            background-color: white;
+            margin: 50px auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .close-button {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .detail-table th {
+            text-align: right;
+            padding: 8px;
+            width: 150px;
+            background-color: #f8f9fa;
+            position: relative;
+            height: auto;
+            vertical-align: top;
+            white-space: nowrap;
+        }
+        
+        .detail-table td {
+            padding: 8px;
+            word-break: break-word;
+            height: auto;
+            max-height: none;
+            white-space: normal;
+            line-height: 1.5;
+            vertical-align: top;
+        }
+        
+        .detail-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        /* 图片放大弹窗样式 */
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content-wrapper {
+            display: flex;
+            max-width: 90%;
+            max-height: 90vh;
+            margin: 30px auto auto auto;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            overflow: hidden;
+            width: 90%;
+        }
+        
+        .modal-image-container {
+            flex: 0 0 66.666%;
+            height: 90vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .modal-image-container img {
+            max-width: 100%;
+            max-height: 90vh;
+            border: 2px solid white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            object-fit: contain;
+        }
+        
+        .modal-info-container {
+            flex: 0 0 33.333%;
+            padding: 20px;
+            color: white;
+            font-size: 14px;
+            overflow-y: auto;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+            box-sizing: border-box;
+        }
+        
+        .modal-info-container .info-section {
+            margin-bottom: 20px;
+        }
+        
+        .modal-info-container .info-label {
+            color: #aaa;
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .modal-info-container h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #fff;
+            line-height: 1.4;
+        }
+        
+        .modal-info-container p {
+            margin: 0 0 20px 0;
+            line-height: 1.4;
+            opacity: 0.9;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+        
+        .clickable {
+            cursor: pointer;
+            color: #0066cc;
+        }
+        
+        .clickable:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .file-select {
+            padding: 8px;
+            min-width: 300px;
+            font-size: 14px;
+        }
+        
+        .total-count {
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .note-input {
+            width: 150px;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            height: 80px;
+            resize: none;
+        }
+        
+        .category-select {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+        }
+        
+        /* 分类样式 */
+        .category-重要 {
+            background-color: rgba(255, 200, 200, 0.2);
+            transition: background-color 0.2s;
+        }
+        
+        .category-普通 {
+            background-color: rgba(200, 255, 200, 0.2);
+            transition: background-color 0.2s;
+        }
+        
+        .category-低优先级 {
+            background-color: rgba(200, 200, 255, 0.2);
+            transition: background-color 0.2s;
+        }
+        
+        /* 添加分类筛选容器样式 */
+        .filter-container {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .filter-button {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+        }
+        
+        .filter-button.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+        
+        .export-button {
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .export-button:hover {
+            background-color: #218838;
+        }
+        
+        .category-manager {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .manage-button {
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .manage-button:hover {
+            background-color: #5a6268;
+        }
+        
+        .category-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+            min-width: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .category-input-container {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 0 0 10px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
+        }
+        
+        .category-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .category-item:last-child {
+            border-bottom: none;
+        }
+        
+        .category-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .delete-category {
+            padding: 4px 8px;
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0.7;
+        }
+        
+        .delete-category:hover {
+            opacity: 1;
+        }
+        
+        .confirm-delete {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .confirm-delete:hover {
+            background-color: #c82333;
+        }
+
+        /* 设置表格行高度 */
+        tr {
+            max-height: 105px;
+            height: 105px;
+        }
+
+        /* 移除表格行高度制 */
+        .detail-table tr {
+            height: auto;
+            max-height: none;
+        }
+
+        /* 修改行悬停效果 */
+        .category-重要:hover {
+            background-color: rgba(255, 200, 200, 0.3);
+        }
+        
+        .category-普通:hover {
+            background-color: rgba(200, 255, 200, 0.3);
+        }
+        
+        .category-低优先级:hover {
+            background-color: rgba(200, 200, 255, 0.3);
+        }
+        
+        tr:hover {
+            cursor: default;
+        }
+
+        /* 添加导航提示样式 */
+        .image-modal::before {
+            content: '← →  或  ↑ ↓  切换图片';
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            opacity: 0.8;
+            z-index: 2001;
+        }
+
+        /* 修改图片模态框的样式 */
+        .image-modal {
+            display: none;  /* 确保默认是隐藏的 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 修改模态框内容的点击判断 */
+        .modal-content-wrapper {
+            display: flex;
+            max-width: 90%;
+            max-height: 90vh;
+            margin: 30px auto auto auto;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            overflow: hidden;
+            width: 90%;
+        }
+
+        /* 添加可点击区域样式 */
+        .modal-info-content {
+            padding: 20px;
+            pointer-events: none;  /* 默认不接收点击事件 */
+        }
+
+        .modal-info-content .info-section {
+            pointer-events: auto;  /* 只有信息部分接收点击事件 */
+        }
+
+        /* 添加类目路径样式 */
+        .category-path {
+            font-size: 13px;
+            line-height: 1.4;
+            color: #fff;
+            margin: 0;
+        }
+
+        .category-path span {
+            color: #aaa;
+        }
+
+        .category-path span + span::before {
+            content: ">";
+            margin: 0 8px;
+            color: #666;
+        }
+    </style>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" class="search-input" placeholder="搜索任意列内容..." id="searchInput">
+        <select id="fileSelect" class="file-select"></select>
+        <span id="totalCount" class="total-count"></span>
+        <button id="exportButton" class="export-button">导出Excel</button>
+        <div class="category-manager">
+            <button id="manageCategoriesButton" class="manage-button">管理分类</button>
+            <div id="categoryDropdown" class="category-dropdown">
+                <div class="category-input-container">
+                    <input type="text" id="newCategoryInput" class="category-input" placeholder="输入新分类名称并按回车">
+                </div>
+                <div id="categoryList"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="table-container">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>商品图片</th>
+                    <th class="sort-header" data-column="机会类型名称">机会类型名称</th>
+                    <th class="sort-header" data-column="招标ID">招商ID</th>
+                    <th class="sort-header" data-column="商品名称">商品名称</th>
+                    <th class="sort-header" data-column="开始时间">开始时间</th>
+                    <th class="sort-header" data-column="剩余时间(天)">剩余时间(天)</th>
+                    <th class="sort-header" data-column="权益说明">权益说明</th>
+                    <th class="sort-header" data-column="产品上架日期">产品上架日期</th>
+                    <th>分类</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <div id="detailModal" class="detail-modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <h2>商品详情</h2>
+            <table class="detail-table" id="detailTable"></table>
+        </div>
+    </div>
+
+    <div id="imageModal" class="image-modal">
+        <div class="modal-content-wrapper">
+            <div class="modal-image-container">
+                <img id="modalImage" src="" alt="放大图片">
+            </div>
+            <div class="modal-info-container">
+                <div class="modal-info-content">
+                    <div class="info-section">
+                        <div class="info-label">商品类目</div>
+                        <p id="modalCategory" class="category-path"></p>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-label">商品名称</div>
+                        <h3 id="modalProductName"></h3>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-label">招标要求</div>
+                        <p id="modalRequirement"></p>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-label">权益说明</div>
+                        <p id="modalRights"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class LazyImageLoader {
+            constructor() {
+                this.observer = new IntersectionObserver(this.handleIntersection.bind(this), {
+                    root: document.querySelector('.table-container'),
+                    rootMargin: '50px 0px',
+                    threshold: 0.1
+                });
+                
+                this.loadedImages = new Set();
+            }
+            
+            handleIntersection(entries) {
+                entries.forEach(entry => {
+                    const container = entry.target;
+                    
+                    if (entry.isIntersecting) {
+                        this.loadImage(container);
+                    } else {
+                        this.unloadImage(container);
+                    }
+                });
+            }
+            
+            loadImage(container) {
+                const imgUrl = container.dataset.src;
+                if (!imgUrl || this.loadedImages.has(container)) return;
+                
+                const img = document.createElement('img');
+                img.className = 'product-img';
+                img.src = imgUrl;
+                
+                img.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    tableManager.showImageModal(imgUrl);
+                });
+                
+                img.onload = () => {
+                    container.innerHTML = '';
+                    container.appendChild(img);
+                    this.loadedImages.add(container);
+                };
+                
+                img.onerror = () => {
+                    container.innerHTML = '加载失败';
+                };
+            }
+            
+            unloadImage(container) {
+                if (!this.loadedImages.has(container)) return;
+                
+                container.innerHTML = '<div class="loading-placeholder">等待加载</div>';
+                this.loadedImages.delete(container);
+            }
+            
+            observe(element) {
+                this.observer.observe(element);
+            }
+            
+            disconnect() {
+                this.observer.disconnect();
+            }
+        }
+
+        class TableManager {
+            constructor() {
+                this.originalData = [];
+                this.filteredData = [];
+                this.currentSortColumn = null;
+                this.isAscending = true;
+                this.imageLoader = new LazyImageLoader();
+                this.setupEventListeners();
+                this.notes = JSON.parse(localStorage.getItem('tableNotes') || '{}');
+                this.categories = JSON.parse(localStorage.getItem('tableCategories') || '{}');
+                this.categoryList = JSON.parse(localStorage.getItem('categoryList') || '["未分类", "重要", "普通", "低优先级"]');
+                this.setupCategoryManager();
+                this.setupExportButton();
+                this.currentImageIndex = -1;
+            }
+            
+            async loadJsonFiles() {
+                try {
+                    const response = await fetch('file_list.json');
+                    const files = await response.json();
+                    const fileSelect = document.getElementById('fileSelect');
+                    
+                    // 按文件名排序，最新的在最前
+                    files.sort((a, b) => b.localeCompare(a));
+                    
+                    files.forEach(file => {
+                        const option = document.createElement('option');
+                        option.value = file;
+                        option.textContent = file.split('.')[0];
+                        fileSelect.appendChild(option);
+                    });
+                    
+                    // 加载最新的文件
+                    if (files.length > 0) {
+                        await this.loadData(files[0]);
+                    }
+                    // 在数据加载完成后设置筛选按钮
+                    this.setupFilterButtons();
+                } catch (error) {
+                    console.error('Error loading file list:', error);
+                }
+            }
+            
+            async loadData(filename) {
+                try {
+                    const response = await fetch(filename);
+                    this.originalData = await response.json();
+                    this.filteredData = [...this.originalData];
+                    this.renderTable();
+                    // 更新数据条数显示
+                    document.getElementById('totalCount').textContent = `共 ${this.originalData.length} 条数据`;
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                }
+            }
+            
+            setupEventListeners() {
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.handleSearch(e.target.value);
+                });
+                
+                document.getElementById('fileSelect').addEventListener('change', async (e) => {
+                    await this.loadData(e.target.value);
+                });
+                
+                document.querySelectorAll('.sort-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        this.handleSort(header.dataset.column);
+                    });
+                });
+            }
+            
+            handleSearch(searchText) {
+                if (!searchText) {
+                    this.filteredData = [...this.originalData];
+                } else {
+                    searchText = searchText.toLowerCase();
+                    this.filteredData = this.originalData.filter(item => {
+                        return Object.values(item).some(value => 
+                            String(value).toLowerCase().includes(searchText)
+                        );
+                    });
+                }
+                this.renderTable();
+                // 更新数据条数显示（显示筛选后的数量）
+                document.getElementById('totalCount').textContent = 
+                    `共 ${this.originalData.length} 条数据 (当前显示 ${this.filteredData.length} 条)`;
+            }
+            
+            handleSort(column) {
+                const headers = document.querySelectorAll('.sort-header');
+                headers.forEach(header => {
+                    if (header.dataset.column !== column) {
+                        header.classList.remove('asc', 'desc');
+                    }
+                });
+                
+                const header = document.querySelector(`[data-column="${column}"]`);
+                
+                if (this.currentSortColumn === column) {
+                    this.isAscending = !this.isAscending;
+                } else {
+                    this.currentSortColumn = column;
+                    this.isAscending = false;
+                }
+                
+                header.classList.toggle('asc', this.isAscending);
+                header.classList.toggle('desc', !this.isAscending);
+                
+                this.filteredData.sort((a, b) => {
+                    let valueA = a[column];
+                    let valueB = b[column];
+                    
+                    if (!isNaN(valueA) && !isNaN(valueB)) {
+                        valueA = Number(valueA);
+                        valueB = Number(valueB);
+                    }
+                    
+                    if (valueA < valueB) return this.isAscending ? -1 : 1;
+                    if (valueA > valueB) return this.isAscending ? 1 : -1;
+                    return 0;
+                });
+                
+                this.renderTable();
+            }
+            
+            renderTable() {
+                const tableBody = document.getElementById('tableBody');
+                tableBody.innerHTML = '';
+                
+                this.filteredData.forEach(item => {
+                    const row = document.createElement('tr');
+                    const productName = item['商品名称'] || '';
+                    const itemId = item['招标ID']; // 用招标ID作为唯一标识
+                    const escapedProductName = productName.replace(/"/g, '&quot;');
+                    
+                    // 添加分类选择和备注列
+                    row.innerHTML = `
+                        <td>
+                            <div class="loading-placeholder" data-src="${item['商品图片链接']}">
+                                等待加载
+                            </div>
+                        </td>
+                        <td>${item['机会类型名称'] || ''}</td>
+                        <td>${itemId || ''}</td>
+                        <td class="clickable">${this.truncateText(productName)}</td>
+                        <td>${item['开始时间'] || ''}</td>
+                        <td>${item['剩余时间(天)'] || ''}</td>
+                        <td class="clickable">${this.truncateText(item['权益说明'])}</td>
+                        <td>${item['产品上架日期'] || ''}</td>
+                        <td>
+                            <select class="category-select" data-id="${itemId}">
+                                ${this.categoryList.map(cat => `
+                                    <option value="${cat}" ${this.categories[itemId] === cat ? 'selected' : ''}>
+                                        ${cat}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </td>
+                        <td>
+                            <textarea class="note-input" 
+                                   placeholder="添加备注..."
+                                   data-id="${itemId}">${this.notes[itemId] || ''}</textarea>
+                        </td>
+                    `;
+                    
+                    // 移除整行的点击事件，改为只对特定单元格添加点击事件
+                    const nameCell = row.querySelector('td:nth-child(4)');  // 商品名称
+                    const rightCell = row.querySelector('td:nth-child(7)'); // 权益说明列
+                    
+                    nameCell.addEventListener('click', () => this.showDetails(item));
+                    rightCell.addEventListener('click', () => this.showDetails(item));
+                    
+                    // 添加备注和分类的事件监听
+                    const noteInput = row.querySelector('.note-input');
+                    noteInput.addEventListener('change', (e) => {
+                        this.saveNote(e.target.dataset.id, e.target.value);
+                    });
+                    
+                    const categorySelect = row.querySelector('.category-select');
+                    categorySelect.addEventListener('change', (e) => {
+                        this.saveCategory(e.target.dataset.id, e.target.value);
+                        row.className = `category-${e.target.value.toLowerCase().replace(/\s+/g, '-')}`;
+                    });
+                    
+                    // 设置行的类名以便应用样式
+                    const currentCategory = this.categories[itemId] || '未分类';
+                    row.className = `category-${currentCategory.toLowerCase().replace(/\s+/g, '-')}`;
+                    
+                    tableBody.appendChild(row);
+                    
+                    const imgContainer = row.querySelector('.loading-placeholder');
+                    this.imageLoader.observe(imgContainer);
+                });
+            }
+            
+            showDetails(item) {
+                const modal = document.getElementById('detailModal');
+                const detailTable = document.getElementById('detailTable');
+                detailTable.innerHTML = '';
+                
+                // 遍历所有属性并显示
+                for (const [key, value] of Object.entries(item)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <th>${key}</th>
+                        <td>${value !== null ? value : ''}</td>
+                    `;
+                    detailTable.appendChild(row);
+                }
+                
+                modal.style.display = 'block';
+            }
+
+            // 保存备注
+            saveNote(id, note) {
+                this.notes[id] = note;
+                localStorage.setItem('tableNotes', JSON.stringify(this.notes));
+            }
+
+            // 保存分类
+            saveCategory(id, category) {
+                this.categories[id] = category;
+                localStorage.setItem('tableCategories', JSON.stringify(this.categories));
+            }
+
+            filterByCategory(category) {
+                if (category === 'all') {
+                    this.filteredData = [...this.originalData];
+                } else {
+                    this.filteredData = this.originalData.filter(item => 
+                        this.categories[item['招标ID']] === category
+                    );
+                }
+                this.renderTable();
+                document.getElementById('totalCount').textContent = 
+                    `共 ${this.originalData.length} 条数据 (当前显示 ${this.filteredData.length} 条)`;
+            }
+
+            setupExportButton() {
+                document.getElementById('exportButton').addEventListener('click', () => {
+                    this.exportToExcel();
+                });
+            }
+
+            exportToExcel() {
+                // 准备导出数据
+                const exportData = this.filteredData.map(item => {
+                    const category = this.categories[item['招标ID']] || '未分类';
+                    const note = this.notes[item['招标ID']] || '';
+                    
+                    return {
+                        '商品图片链接': item['商品图片链接'] || '',
+                        '机会类型名称': item['机会类型名称'] || '',
+                        '招商ID': item['招标ID'] || '',
+                        '商品名称': item['商品名称'] || '',
+                        '开始时间': item['开始时间'] || '',
+                        '剩余时间(天)': item['剩余时间(天)'] || '',
+                        '权益说明': item['权益说明'] || '',
+                        '产品上架日期': item['产品上架日期'] || '',
+                        '分类': category,
+                        '备注': note,
+                        // 添加其他需要导出的字段...
+                    };
+                });
+
+                // 创建工作簿
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(exportData);
+
+                // 设置列宽
+                const columnWidths = [
+                    { wch: 50 }, // 商品图片链接
+                    { wch: 15 }, // 机会类型名称
+                    { wch: 12 }, // 招商ID
+                    { wch: 30 }, // 商品名称
+                    { wch: 20 }, // 开始时间
+                    { wch: 12 }, // 剩余时间
+                    { wch: 50 }, // 权益说明
+                    { wch: 20 }, // 产品上架日期
+                    { wch: 10 }, // 分类
+                    { wch: 30 }, // 备注
+                ];
+                ws['!cols'] = columnWidths;
+
+                // 添加工作表到工作簿
+                XLSX.utils.book_append_sheet(wb, ws, "商品信息");
+
+                // 生成文件名（使用当前时间）
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const fileName = `商品信息表_${timestamp}.xlsx`;
+
+                // 保存文件
+                XLSX.writeFile(wb, fileName);
+            }
+
+            setupFilterButtons() {
+                const filterContainer = document.getElementById('filterContainer');
+                
+                // 添加"全部"按钮
+                const allButton = document.createElement('button');
+                allButton.className = 'filter-button active';
+                allButton.dataset.category = 'all';
+                allButton.textContent = '全部';
+                filterContainer.appendChild(allButton);
+                
+                // 添加其他分类按钮
+                this.categoryList.forEach(category => {
+                    const button = document.createElement('button');
+                    button.className = 'filter-button';
+                    button.dataset.category = category;
+                    button.textContent = category;
+                    filterContainer.appendChild(button);
+                });
+                
+                // 添加点击事件
+                filterContainer.querySelectorAll('.filter-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        filterContainer.querySelectorAll('.filter-button').forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+                        e.target.classList.add('active');
+                        this.filterByCategory(e.target.dataset.category);
+                    });
+                });
+            }
+
+            setupCategoryManager() {
+                const manageButton = document.getElementById('manageCategoriesButton');
+                const dropdown = document.getElementById('categoryDropdown');
+                const input = document.getElementById('newCategoryInput');
+                
+                // 点击管理按钮显示/隐藏下拉框
+                manageButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (dropdown.style.display === 'block') {
+                        dropdown.style.display = 'none';
+                    } else {
+                        dropdown.style.display = 'block';
+                        this.renderCategoryList();
+                        input.focus();
+                    }
+                });
+
+                // 点击其他地方时隐藏下拉框
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.category-manager')) {
+                        dropdown.style.display = 'none';
+                    }
+                });
+
+                // 添加新分类的回车事件监听
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const newCategory = input.value.trim();
+                        if (newCategory && !this.categoryList.includes(newCategory)) {
+                            this.categoryList.push(newCategory);
+                            this.saveCategoryList();
+                            this.renderCategoryList();
+                            this.renderFilterButtons();
+                            input.value = '';
+                        }
+                    }
+                });
+            }
+
+            renderCategoryList() {
+                const categoryList = document.getElementById('categoryList');
+                categoryList.innerHTML = '';
+
+                this.categoryList.forEach(category => {
+                    if (category === '未分类') return; // 不允许删除"未分类"
+                    
+                    const item = document.createElement('div');
+                    item.className = 'category-item';
+                    item.innerHTML = `
+                        <span>${category}</span>
+                        <button class="delete-category" data-category="${category}">×</button>
+                    `;
+                    
+                    const deleteButton = item.querySelector('.delete-category');
+                    deleteButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const confirmButton = document.createElement('button');
+                        confirmButton.className = 'confirm-delete';
+                        confirmButton.textContent = '确认删除';
+                        
+                        // 替换删除按钮为确认按钮
+                        deleteButton.replaceWith(confirmButton);
+                        
+                        // 5秒后恢复原按钮
+                        const timeout = setTimeout(() => {
+                            confirmButton.replaceWith(deleteButton);
+                        }, 5000);
+                        
+                        // 点击确认按钮删除分类
+                        confirmButton.addEventListener('click', () => {
+                            clearTimeout(timeout);
+                            this.deleteCategory(category);
+                        });
+                    });
+                    
+                    categoryList.appendChild(item);
+                });
+            }
+
+            deleteCategory(category) {
+                const index = this.categoryList.indexOf(category);
+                if (index > -1) {
+                    // 将该分类下的所有项目移到"未分类"
+                    Object.keys(this.categories).forEach(id => {
+                        if (this.categories[id] === category) {
+                            this.categories[id] = '未分类';
+                        }
+                    });
+                    
+                    this.categoryList.splice(index, 1);
+                    this.saveCategoryList();
+                    this.renderCategoryList();
+                    this.renderFilterButtons();
+                    
+                    // 保存更新后的分类
+                    localStorage.setItem('tableCategories', JSON.stringify(this.categories));
+                    // 更新表格中的分类显示
+                    this.updateAllCategorySelects();
+                }
+            }
+
+            saveCategoryList() {
+                localStorage.setItem('categoryList', JSON.stringify(this.categoryList));
+                // 更新表格中的所有分类选择框
+                this.updateAllCategorySelects();
+            }
+
+            updateAllCategorySelects() {
+                const categorySelects = document.querySelectorAll('.category-select');
+                categorySelects.forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = this.categoryList.map(cat => `
+                        <option value="${cat}" ${currentValue === cat ? 'selected' : ''}>
+                            ${cat}
+                        </option>
+                    `).join('');
+                });
+            }
+
+            renderFilterButtons() {
+                const filterContainer = document.getElementById('filterContainer');
+                filterContainer.innerHTML = '';
+                
+                // 添加"全部"按钮
+                const allButton = document.createElement('button');
+                allButton.className = 'filter-button active';
+                allButton.dataset.category = 'all';
+                allButton.textContent = '全部';
+                filterContainer.appendChild(allButton);
+                
+                // 添加其他分类按钮
+                this.categoryList.forEach(category => {
+                    const button = document.createElement('button');
+                    button.className = 'filter-button';
+                    button.dataset.category = category;
+                    button.textContent = category;
+                    filterContainer.appendChild(button);
+                });
+                
+                // 添加点击事件
+                filterContainer.querySelectorAll('.filter-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        filterContainer.querySelectorAll('.filter-button').forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+                        e.target.classList.add('active');
+                        this.filterByCategory(e.target.dataset.category);
+                    });
+                });
+            }
+
+            truncateText(text, length = 60) {
+                if (!text) return '';
+                const str = String(text);
+                if (str.length <= length) {
+                    return `<span class="full-text">${str}</span>`;
+                }
+                return `<span class="truncated-text" data-full-text="${str}">${str.slice(0, length)}...</span>`;
+            }
+
+            getVisibleImageUrls() {
+                return this.filteredData.map(item => item['商品图片链接']).filter(url => url);
+            }
+
+            showImageModal(imgUrl) {
+                const urls = this.getVisibleImageUrls();
+                this.currentImageIndex = urls.indexOf(imgUrl);
+                this.updateModalImage();
+            }
+
+            updateModalImage() {
+                const urls = this.getVisibleImageUrls();
+                if (this.currentImageIndex >= 0 && this.currentImageIndex < urls.length) {
+                    const modal = document.getElementById('imageModal');
+                    const modalImg = document.getElementById('modalImage');
+                    const currentUrl = urls[this.currentImageIndex];
+                    modalImg.src = currentUrl;
+                    
+                    // 查找对应的数据项
+                    const currentItem = this.filteredData.find(item => item['商品图片链接'] === currentUrl);
+                    if (currentItem) {
+                        document.getElementById('modalProductName').textContent = currentItem['商品名称'] || '';
+                        document.getElementById('modalRequirement').textContent = currentItem['招标要求'] || '';
+                        document.getElementById('modalRights').textContent = currentItem['权益说明'] || '';
+                        
+                        // 构建并显示类目路径
+                        const categories = [
+                            currentItem['一级类目'],
+                            currentItem['二级类目'],
+                            currentItem['三级类目'],
+                            currentItem['四级类目']
+                        ].filter(cat => cat); // 过滤掉 null 和空值
+                        
+                        document.getElementById('modalCategory').innerHTML = categories
+                            .map(cat => `<span>${cat}</span>`)
+                            .join('');
+                    }
+                    
+                    modal.style.display = 'block';
+                }
+            }
+
+            navigateImage(direction) {
+                const urls = this.getVisibleImageUrls();
+                if (direction === 'next') {
+                    this.currentImageIndex = (this.currentImageIndex + 1) % urls.length;
+                } else if (direction === 'prev') {
+                    this.currentImageIndex = (this.currentImageIndex - 1 + urls.length) % urls.length;
+                }
+                this.updateModalImage();
+            }
+        }
+
+        // 添加关闭弹窗函数
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        // 点击弹窗外部关闭弹窗
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // 添加图片放大相关函数
+        function showImageModal(imgUrl) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modalImg.src = imgUrl;
+            modal.style.display = 'block';
+        }
+        
+        function closeImageModal() {
+            document.getElementById('imageModal').style.display = 'none';
+            tableManager.currentImageIndex = -1;
+        }
+        
+        // 添加ESC键关闭图片弹窗
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('imageModal').style.display === 'block') {
+                switch(e.key) {
+                    case 'Escape':
+                        closeImageModal();
+                        break;
+                    case 'ArrowRight':
+                    case 'ArrowDown':
+                        tableManager.navigateImage('next');
+                        break;
+                    case 'ArrowLeft':
+                    case 'ArrowUp':
+                        tableManager.navigateImage('prev');
+                        break;
+                }
+            }
+        });
+
+        let tableManager;
+        document.addEventListener('DOMContentLoaded', () => {
+            tableManager = new TableManager();
+            tableManager.loadJsonFiles();
+            
+            // 修改模态框点击事件
+            document.getElementById('imageModal').addEventListener('click', (e) => {
+                // 检查点击是否在信息区域内
+                const infoContainer = document.querySelector('.modal-info-container');
+                const imageContainer = document.querySelector('.modal-image-container');
+                const modalImage = document.getElementById('modalImage');
+                
+                // 如果点击在信息容器内，直接返回
+                if (infoContainer.contains(e.target)) {
+                    return;
+                }
+                
+                // 如果点击在图片容器内检查是否在图片保护区域内
+                if (imageContainer.contains(e.target)) {
+                    const rect = modalImage.getBoundingClientRect();
+                    const x = e.clientX;
+                    const y = e.clientY;
+                    
+                    // 检查点击位置是否在图片边缘30像素范围内
+                    if (x >= rect.left - 20 && 
+                        x <= rect.right + 20 && 
+                        y >= rect.top - 20 && 
+                        y <= rect.bottom + 20) {
+                        return;
+                    }
+                }
+                
+                // 如果点击在保护区域外，关闭模态框
+                closeImageModal();
+            });
+        });
+    </script>
+</body>
+</html> 

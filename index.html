@@ -44,36 +44,6 @@
             position: relative;
         }
         
-        /* 权益说明列可以显示多行 */
-        td:nth-child(7) {
-            white-space: pre-wrap;
-            max-width: 300px;
-            min-width: 150px;
-            line-height: 1.2;
-        }
-
-        /* 添加权益说明列的悬浮效果 */
-        td:nth-child(7) .truncated-text:hover::after {
-            content: attr(data-full-text);
-            position: fixed;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 15px;
-            border-radius: 4px;
-            z-index: 1000;
-            max-width: 80%;
-            max-height: 80vh;
-            overflow-y: auto;
-            white-space: normal;
-            word-break: break-word;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
         /* 调整图片列宽度 */
         td:first-child {
             width: 80px;
@@ -376,7 +346,7 @@
             resize: none;
         }
         
-        .category-select {
+        .category-select, .score-select {
             padding: 4px 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -635,6 +605,78 @@
             margin: 0 8px;
             color: #666;
         }
+
+        /* 添加评分管理器样式 */
+        .score-manager {
+            position: relative;
+            display: inline-block;
+            margin-right: 10px;  /* 与分类管理按钮保持间距 */
+        }
+
+        /* 修改下拉框样式 */
+        .category-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+            min-width: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* 修改按钮样式统一 */
+        .score-manager .manage-button,
+        .category-manager .manage-button {
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .score-manager .manage-button:hover,
+        .category-manager .manage-button:hover {
+            background-color: #5a6268;
+        }
+
+        /* 添加模态框中选择框和文本框的样式 */
+        .modal-select {
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 5px;
+        }
+
+        .modal-select option {
+            background-color: #2c2c2c;
+            color: white;
+        }
+
+        .modal-note {
+            width: 100%;
+            height: 100px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 5px;
+            padding: 8px;
+            resize: vertical;
+        }
+
+        .modal-note::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
     </style>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
@@ -665,8 +707,8 @@
                     <th class="sort-header" data-column="商品名称">商品名称</th>
                     <th class="sort-header" data-column="开始时间">开始时间</th>
                     <th class="sort-header" data-column="剩余时间(天)">剩余时间(天)</th>
-                    <th class="sort-header" data-column="权益说明">权益说明</th>
                     <th class="sort-header" data-column="产品上架日期">产品上架日期</th>
+                    <th>评分</th>
                     <th>分类</th>
                     <th>备注</th>
                 </tr>
@@ -692,7 +734,7 @@
                 <div class="modal-info-content">
                     <div class="info-section">
                         <div class="info-label">商品类目</div>
-                        <p id="modalCategory" class="category-path"></p>
+                        <p id="modalCategoryPath" class="category-path"></p>
                     </div>
                     <div class="info-section">
                         <div class="info-label">商品名称</div>
@@ -705,6 +747,18 @@
                     <div class="info-section">
                         <div class="info-label">权益说明</div>
                         <p id="modalRights"></p>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-label">评分</div>
+                        <select id="modalScore" class="score-select modal-select"></select>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-label">分类</div>
+                        <select id="modalCategory" class="category-select modal-select"></select>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-label">备注</div>
+                        <textarea id="modalNote" class="note-input modal-note" placeholder="添加备注..."></textarea>
                     </div>
                 </div>
             </div>
@@ -786,7 +840,10 @@
                 this.notes = JSON.parse(localStorage.getItem('tableNotes') || '{}');
                 this.categories = JSON.parse(localStorage.getItem('tableCategories') || '{}');
                 this.categoryList = JSON.parse(localStorage.getItem('categoryList') || '["未分类", "重要", "普通", "低优先级"]');
+                this.scores = JSON.parse(localStorage.getItem('tableScores') || '{}');
+                this.scoreList = JSON.parse(localStorage.getItem('scoreList') || '["未评分", "0", "30", "50", "60", "70", "80", "90"]');
                 this.setupCategoryManager();
+                this.setupScoreManager();
                 this.setupExportButton();
                 this.currentImageIndex = -1;
             }
@@ -845,6 +902,34 @@
                         this.handleSort(header.dataset.column);
                     });
                 });
+                
+                // 添加模态框中的评分、分类和备注更改事件
+                document.getElementById('modalScore').addEventListener('change', (e) => {
+                    this.saveScore(e.target.dataset.id, e.target.value);
+                    // 同步更新表格中的选择框
+                    const tableSelect = document.querySelector(`.score-select[data-id="${e.target.dataset.id}"]`);
+                    if (tableSelect) {
+                        tableSelect.value = e.target.value;
+                    }
+                });
+                
+                document.getElementById('modalCategory').addEventListener('change', (e) => {
+                    this.saveCategory(e.target.dataset.id, e.target.value);
+                    // 同步更新表格中的选择框
+                    const tableSelect = document.querySelector(`.category-select[data-id="${e.target.dataset.id}"]`);
+                    if (tableSelect) {
+                        tableSelect.value = e.target.value;
+                    }
+                });
+                
+                document.getElementById('modalNote').addEventListener('input', (e) => {
+                    this.saveNote(e.target.dataset.id, e.target.value);
+                    // 同步更新表格中的文本框
+                    const tableTextarea = document.querySelector(`.note-input[data-id="${e.target.dataset.id}"]`);
+                    if (tableTextarea) {
+                        tableTextarea.value = e.target.value;
+                    }
+                });
             }
             
             handleSearch(searchText) {
@@ -859,7 +944,7 @@
                     });
                 }
                 this.renderTable();
-                // 更新数据条数显示（显示筛选后的数量）
+                // 更新数据条数显示（显示筛选后的数据）
                 document.getElementById('totalCount').textContent = 
                     `共 ${this.originalData.length} 条数据 (当前显示 ${this.filteredData.length} 条)`;
             }
@@ -923,8 +1008,16 @@
                         <td class="clickable">${this.truncateText(productName)}</td>
                         <td>${item['开始时间'] || ''}</td>
                         <td>${item['剩余时间(天)'] || ''}</td>
-                        <td class="clickable">${this.truncateText(item['权益说明'])}</td>
                         <td>${item['产品上架日期'] || ''}</td>
+                        <td>
+                            <select class="score-select" data-id="${itemId}">
+                                ${this.scoreList.map(score => `
+                                    <option value="${score}" ${this.scores[itemId] === score ? 'selected' : ''}>
+                                        ${score}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </td>
                         <td>
                             <select class="category-select" data-id="${itemId}">
                                 ${this.categoryList.map(cat => `
@@ -963,6 +1056,12 @@
                     // 设置行的类名以便应用样式
                     const currentCategory = this.categories[itemId] || '未分类';
                     row.className = `category-${currentCategory.toLowerCase().replace(/\s+/g, '-')}`;
+                    
+                    // 添加评分选择事件监听
+                    const scoreSelect = row.querySelector('.score-select');
+                    scoreSelect.addEventListener('change', (e) => {
+                        this.saveScore(e.target.dataset.id, e.target.value);
+                    });
                     
                     tableBody.appendChild(row);
                     
@@ -1025,6 +1124,7 @@
                 const exportData = this.filteredData.map(item => {
                     const category = this.categories[item['招标ID']] || '未分类';
                     const note = this.notes[item['招标ID']] || '';
+                    const score = this.scores[item['招标ID']] || '未评分';
                     
                     return {
                         '商品图片链接': item['商品图片链接'] || '',
@@ -1035,6 +1135,7 @@
                         '剩余时间(天)': item['剩余时间(天)'] || '',
                         '权益说明': item['权益说明'] || '',
                         '产品上架日期': item['产品上架日期'] || '',
+                        '评分': score,
                         '分类': category,
                         '备注': note,
                         // 添加其他需要导出的字段...
@@ -1283,9 +1384,33 @@
                     // 查找对应的数据项
                     const currentItem = this.filteredData.find(item => item['商品图片链接'] === currentUrl);
                     if (currentItem) {
+                        const itemId = currentItem['招标ID'];
                         document.getElementById('modalProductName').textContent = currentItem['商品名称'] || '';
                         document.getElementById('modalRequirement').textContent = currentItem['招标要求'] || '';
                         document.getElementById('modalRights').textContent = currentItem['权益说明'] || '';
+                        
+                        // 更新评分选择框
+                        const modalScore = document.getElementById('modalScore');
+                        modalScore.innerHTML = this.scoreList.map(score => `
+                            <option value="${score}" ${this.scores[itemId] === score ? 'selected' : ''}>
+                                ${score}
+                            </option>
+                        `).join('');
+                        modalScore.dataset.id = itemId;
+                        
+                        // 更新分类选择框
+                        const modalCategory = document.getElementById('modalCategory');
+                        modalCategory.innerHTML = this.categoryList.map(cat => `
+                            <option value="${cat}" ${this.categories[itemId] === cat ? 'selected' : ''}>
+                                ${cat}
+                            </option>
+                        `).join('');
+                        modalCategory.dataset.id = itemId;
+                        
+                        // 更新备注
+                        const modalNote = document.getElementById('modalNote');
+                        modalNote.value = this.notes[itemId] || '';
+                        modalNote.dataset.id = itemId;
                         
                         // 构建并显示类目路径
                         const categories = [
@@ -1293,9 +1418,9 @@
                             currentItem['二级类目'],
                             currentItem['三级类目'],
                             currentItem['四级类目']
-                        ].filter(cat => cat); // 过滤掉 null 和空值
+                        ].filter(cat => cat);
                         
-                        document.getElementById('modalCategory').innerHTML = categories
+                        document.getElementById('modalCategoryPath').innerHTML = categories
                             .map(cat => `<span>${cat}</span>`)
                             .join('');
                     }
@@ -1312,6 +1437,141 @@
                     this.currentImageIndex = (this.currentImageIndex - 1 + urls.length) % urls.length;
                 }
                 this.updateModalImage();
+            }
+
+            setupScoreManager() {
+                const manageButton = document.createElement('button');
+                manageButton.id = 'manageScoresButton';
+                manageButton.className = 'manage-button';
+                manageButton.textContent = '管理评分';
+                
+                const scoreManager = document.createElement('div');
+                scoreManager.className = 'score-manager';
+                scoreManager.innerHTML = `
+                    <div id="scoreDropdown" class="category-dropdown">
+                        <div class="category-input-container">
+                            <input type="text" id="newScoreInput" class="category-input" placeholder="输入新评分并按回车">
+                        </div>
+                        <div id="scoreList"></div>
+                    </div>
+                `;
+                
+                // 插入到导出按钮之后
+                document.querySelector('.export-button').after(scoreManager);
+                scoreManager.insertBefore(manageButton, scoreManager.firstChild);
+                
+                this.setupScoreDropdown();
+            }
+
+            setupScoreDropdown() {
+                const manageButton = document.getElementById('manageScoresButton');
+                const dropdown = document.getElementById('scoreDropdown');
+                const input = document.getElementById('newScoreInput');
+                
+                manageButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (dropdown.style.display === 'block') {
+                        dropdown.style.display = 'none';
+                    } else {
+                        dropdown.style.display = 'block';
+                        this.renderScoreList();
+                        input.focus();
+                    }
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.score-manager')) {
+                        dropdown.style.display = 'none';
+                    }
+                });
+                
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const newScore = input.value.trim();
+                        if (newScore && !this.scoreList.includes(newScore)) {
+                            this.scoreList.push(newScore);
+                            this.saveScoreList();
+                            this.renderScoreList();
+                            input.value = '';
+                        }
+                    }
+                });
+            }
+
+            renderScoreList() {
+                const scoreList = document.getElementById('scoreList');
+                scoreList.innerHTML = '';
+                
+                this.scoreList.forEach(score => {
+                    if (score === '未评分') return;
+                    
+                    const item = document.createElement('div');
+                    item.className = 'category-item';
+                    item.innerHTML = `
+                        <span>${score}</span>
+                        <button class="delete-category" data-score="${score}">×</button>
+                    `;
+                    
+                    const deleteButton = item.querySelector('.delete-category');
+                    deleteButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const confirmButton = document.createElement('button');
+                        confirmButton.className = 'confirm-delete';
+                        confirmButton.textContent = '确认删除';
+                        
+                        deleteButton.replaceWith(confirmButton);
+                        
+                        const timeout = setTimeout(() => {
+                            confirmButton.replaceWith(deleteButton);
+                        }, 5000);
+                        
+                        confirmButton.addEventListener('click', () => {
+                            clearTimeout(timeout);
+                            this.deleteScore(score);
+                        });
+                    });
+                    
+                    scoreList.appendChild(item);
+                });
+            }
+
+            deleteScore(score) {
+                const index = this.scoreList.indexOf(score);
+                if (index > -1) {
+                    Object.keys(this.scores).forEach(id => {
+                        if (this.scores[id] === score) {
+                            this.scores[id] = '未评分';
+                        }
+                    });
+                    
+                    this.scoreList.splice(index, 1);
+                    this.saveScoreList();
+                    this.renderScoreList();
+                    localStorage.setItem('tableScores', JSON.stringify(this.scores));
+                    this.updateAllScoreSelects();
+                }
+            }
+
+            saveScoreList() {
+                localStorage.setItem('scoreList', JSON.stringify(this.scoreList));
+                this.updateAllScoreSelects();
+            }
+
+            updateAllScoreSelects() {
+                const scoreSelects = document.querySelectorAll('.score-select');
+                scoreSelects.forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = this.scoreList.map(score => `
+                        <option value="${score}" ${currentValue === score ? 'selected' : ''}>
+                            ${score}
+                        </option>
+                    `).join('');
+                });
+            }
+
+            saveScore(id, score) {
+                this.scores[id] = score;
+                localStorage.setItem('tableScores', JSON.stringify(this.scores));
             }
         }
 

@@ -108,12 +108,12 @@
         }
         
         .sort-header.asc::after {
-            content: '↑';
+            content: '⬆️';
             opacity: 1;
         }
         
         .sort-header.desc::after {
-            content: '↓';
+            content: '⬇️';
             opacity: 1;
         }
         
@@ -268,12 +268,22 @@
             min-width: 300px;
             font-size: 14px;
         }
+        
+        .total-count {
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div class="search-container">
         <input type="text" class="search-input" placeholder="搜索任意列内容..." id="searchInput">
         <select id="fileSelect" class="file-select"></select>
+        <span id="totalCount" class="total-count"></span>
     </div>
     
     <div class="table-container">
@@ -412,6 +422,8 @@
                     this.originalData = await response.json();
                     this.filteredData = [...this.originalData];
                     this.renderTable();
+                    // 更新数据条数显示
+                    document.getElementById('totalCount').textContent = `共 ${this.originalData.length} 条数据`;
                 } catch (error) {
                     console.error('Error loading data:', error);
                 }
@@ -445,6 +457,9 @@
                     });
                 }
                 this.renderTable();
+                // 更新数据条数显示（显示筛选后的数量）
+                document.getElementById('totalCount').textContent = 
+                    `共 ${this.originalData.length} 条数据 (当前显示 ${this.filteredData.length} 条)`;
             }
             
             handleSort(column) {
@@ -510,7 +525,7 @@
                     `;
                     
                     // 移除整行的点击事件，改为只对特定单元格添加点击事件
-                    const nameCell = row.querySelector('td:nth-child(4)');  // 商品名称���
+                    const nameCell = row.querySelector('td:nth-child(4)');  // 商品名称
                     const rightCell = row.querySelector('td:nth-child(7)'); // 权益说明列
                     
                     nameCell.addEventListener('click', () => this.showDetails(item));

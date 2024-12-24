@@ -508,6 +508,21 @@
         tr:hover {
             cursor: default;
         }
+
+        /* 添加导航提示样式 */
+        .image-modal::before {
+            content: '← →  或  ↑ ↓  切换图片';
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
     </style>
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
@@ -592,10 +607,9 @@
                 img.className = 'product-img';
                 img.src = imgUrl;
                 
-                // 加点击事件，阻止事件冒泡
                 img.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    showImageModal(imgUrl);
+                    tableManager.showImageModal(imgUrl);
                 });
                 
                 img.onload = () => {
@@ -635,9 +649,10 @@
                 this.setupEventListeners();
                 this.notes = JSON.parse(localStorage.getItem('tableNotes') || '{}');
                 this.categories = JSON.parse(localStorage.getItem('tableCategories') || '{}');
-                this.categoryList = JSON.parse(localStorage.getItem('categoryList') || '["未分类", "重要", "普通", "低优先级"]');
+                this.categoryList = JSON.parse(localStorage.getItem('categoryList') || '["未分类", "重��", "普通", "低优先级"]');
                 this.setupCategoryManager();
                 this.setupExportButton();
+                this.currentImageIndex = -1;
             }
             
             async loadJsonFiles() {
@@ -757,7 +772,7 @@
                 this.filteredData.forEach(item => {
                     const row = document.createElement('tr');
                     const productName = item['商品名称'] || '';
-                    const itemId = item['招标ID']; // 使用招标ID作为唯一标识
+                    const itemId = item['招标ID']; // ���用招标ID作为唯一标识
                     const escapedProductName = productName.replace(/"/g, '&quot;');
                     
                     // 添加分类选择和备注列
@@ -785,7 +800,7 @@
                         </td>
                         <td>
                             <textarea class="note-input" 
-                                   placeholder="添加备注..."
+                                   placeholder="���加备注..."
                                    data-id="${itemId}">${this.notes[itemId] || ''}</textarea>
                         </td>
                     `;
@@ -882,7 +897,7 @@
                         '商品名称': item['商品名称'] || '',
                         '开始时间': item['开始时间'] || '',
                         '剩余时间(天)': item['剩余时间(天)'] || '',
-                        '权益说明': item['权益说���'] || '',
+                        '权益说明': item['权益说明'] || '',
                         '产品上架日期': item['产品上架日期'] || '',
                         '分类': category,
                         '备注': note,
@@ -930,7 +945,7 @@
                 allButton.textContent = '全部';
                 filterContainer.appendChild(allButton);
                 
-                // 添加其他分类按钮
+                // 添加��他分类按钮
                 this.categoryList.forEach(category => {
                     const button = document.createElement('button');
                     button.className = 'filter-button';
@@ -1110,6 +1125,36 @@
                 }
                 return `<span class="truncated-text" data-full-text="${str}">${str.slice(0, length)}...</span>`;
             }
+
+            getVisibleImageUrls() {
+                return this.filteredData.map(item => item['商品图片链接']).filter(url => url);
+            }
+
+            showImageModal(imgUrl) {
+                const urls = this.getVisibleImageUrls();
+                this.currentImageIndex = urls.indexOf(imgUrl);
+                this.updateModalImage();
+            }
+
+            updateModalImage() {
+                const urls = this.getVisibleImageUrls();
+                if (this.currentImageIndex >= 0 && this.currentImageIndex < urls.length) {
+                    const modal = document.getElementById('imageModal');
+                    const modalImg = document.getElementById('modalImage');
+                    modalImg.src = urls[this.currentImageIndex];
+                    modal.style.display = 'block';
+                }
+            }
+
+            navigateImage(direction) {
+                const urls = this.getVisibleImageUrls();
+                if (direction === 'next') {
+                    this.currentImageIndex = (this.currentImageIndex + 1) % urls.length;
+                } else if (direction === 'prev') {
+                    this.currentImageIndex = (this.currentImageIndex - 1 + urls.length) % urls.length;
+                }
+                this.updateModalImage();
+            }
         }
 
         // 添加关闭弹窗函数
@@ -1135,17 +1180,31 @@
         
         function closeImageModal() {
             document.getElementById('imageModal').style.display = 'none';
+            tableManager.currentImageIndex = -1;
         }
         
         // 添加ESC键关闭图片弹窗
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeImageModal();
+            if (document.getElementById('imageModal').style.display === 'block') {
+                switch(e.key) {
+                    case 'Escape':
+                        closeImageModal();
+                        break;
+                    case 'ArrowRight':
+                    case 'ArrowDown':
+                        tableManager.navigateImage('next');
+                        break;
+                    case 'ArrowLeft':
+                    case 'ArrowUp':
+                        tableManager.navigateImage('prev');
+                        break;
+                }
             }
         });
 
+        let tableManager;
         document.addEventListener('DOMContentLoaded', () => {
-            const tableManager = new TableManager();
+            tableManager = new TableManager();
             tableManager.loadJsonFiles();
         });
     </script>

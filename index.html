@@ -81,6 +81,9 @@
         
         .search-container {
             margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
         
         .search-input {
@@ -259,11 +262,18 @@
         .clickable:hover {
             background-color: #f0f0f0;
         }
+        
+        .file-select {
+            padding: 8px;
+            min-width: 300px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="search-container">
         <input type="text" class="search-input" placeholder="搜索任意列内容..." id="searchInput">
+        <select id="fileSelect" class="file-select"></select>
     </div>
     
     <div class="table-container">
@@ -371,9 +381,34 @@
                 this.setupEventListeners();
             }
             
-            async loadData() {
+            async loadJsonFiles() {
                 try {
-                    const response = await fetch('招标商品信息表_所有类目-2024122409_120x401_20241224_0953.json');
+                    const response = await fetch('file_list.json');  // 需要创建这个文件来存储JSON文件列表
+                    const files = await response.json();
+                    const fileSelect = document.getElementById('fileSelect');
+                    
+                    // 按文件名排序，最新的在最前
+                    files.sort((a, b) => b.localeCompare(a));
+                    
+                    files.forEach(file => {
+                        const option = document.createElement('option');
+                        option.value = file;
+                        option.textContent = file.split('.')[0];
+                        fileSelect.appendChild(option);
+                    });
+                    
+                    // 加载最新的文件
+                    if (files.length > 0) {
+                        await this.loadData(files[0]);
+                    }
+                } catch (error) {
+                    console.error('Error loading file list:', error);
+                }
+            }
+            
+            async loadData(filename) {
+                try {
+                    const response = await fetch(filename);
                     this.originalData = await response.json();
                     this.filteredData = [...this.originalData];
                     this.renderTable();
@@ -385,6 +420,10 @@
             setupEventListeners() {
                 document.getElementById('searchInput').addEventListener('input', (e) => {
                     this.handleSearch(e.target.value);
+                });
+                
+                document.getElementById('fileSelect').addEventListener('change', async (e) => {
+                    await this.loadData(e.target.value);
                 });
                 
                 document.querySelectorAll('.sort-header').forEach(header => {
@@ -471,7 +510,7 @@
                     `;
                     
                     // 移除整行的点击事件，改为只对特定单元格添加点击事件
-                    const nameCell = row.querySelector('td:nth-child(4)');  // 商品名称列
+                    const nameCell = row.querySelector('td:nth-child(4)');  // 商品名称���
                     const rightCell = row.querySelector('td:nth-child(7)'); // 权益说明列
                     
                     nameCell.addEventListener('click', () => this.showDetails(item));
@@ -537,7 +576,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             const tableManager = new TableManager();
-            tableManager.loadData();
+            tableManager.loadJsonFiles();
         });
     </script>
 </body>

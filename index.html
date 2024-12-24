@@ -420,13 +420,13 @@
                 
                 if (this.currentSortColumn === column) {
                     this.isAscending = !this.isAscending;
-                    header.classList.toggle('asc', this.isAscending);
-                    header.classList.toggle('desc', !this.isAscending);
                 } else {
                     this.currentSortColumn = column;
-                    this.isAscending = true;
-                    header.classList.add('asc');
+                    this.isAscending = false;
                 }
+                
+                header.classList.toggle('asc', this.isAscending);
+                header.classList.toggle('desc', !this.isAscending);
                 
                 this.filteredData.sort((a, b) => {
                     let valueA = a[column];
